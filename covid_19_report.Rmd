@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # https://datasharkie.com/covid-19-daily-statistics-updates/?fbclid=IwAR0EwXLIH_AiwEmU7KxOMyfgE83nmdLH34Dj5QCtOdFA78pTHRsdf2KRguQ
 # https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide
 # https://github.com/CSSEGISandData/COVID-19
-
+# https://github.com/alexb523/covid-19-data
 
 # automatically create a bib database for R packages
 knitr::write_bib(c(
@@ -57,7 +57,7 @@ Here is a list of all the dates used in this data:
 
 # list all the files in the path
 covid_files <- list.files(path = "csse_covid_19_data/csse_covid_19_daily_reports", pattern = ".csv", full.names = T)
-pander::pander(gsub("_|.csv", "", basename(covid_files)))
+gsub("_|.csv", "", basename(covid_files))
 
 covid_data <- map(covid_files,
                   function(x) {
@@ -99,7 +99,7 @@ covid_world %>%
     geom_line() +
     scale_y_continuous(labels = comma) +
     scale_colour_discrete(guide = 'none') +
-    scale_x_date(breaks = pretty_breaks(10), expand = c(0, 5)) +
+    scale_x_date(breaks = pretty_breaks(10), expand = c(0, 10)) +
     geom_dl(aes(label = Outcome), method = list(dl.trans(x = x + 0.2), "last.points", cex = 0.8)) +
     coord_cartesian(clip = 'off') +
     theme_bw() +
@@ -152,4 +152,37 @@ covid_world %>%
     ylab("Proportion") +
     ggtitle("Stacked Death & Recover Rate Overtime")
 
+```
+
+# Country Analysis
+
+To look at country analysis we're going to `group by` country and date. Then we will look at the countries with the top 10% or cases.
+
+```{r top 10 countries, echo=FALSE}
+# country analysis ----
+
+# group by country and dates
+cntry_tots <- covid_data %>%
+  group_by(Country_Region, Date) %>%
+  summarize(Confirmed = sum(Confirmed), Deaths = sum(Deaths), Recovered = sum(Recovered))
+
+# top 10% of contries
+top_cntry <- cntry_tots %>% 
+  group_by(Country_Region) %>% 
+  summarize(Confirmed = sum(Confirmed, na.rm = T),
+            Deaths = sum(Deaths, na.rm = T),
+            Recovered = sum(Recovered, na.rm = T)) %>% 
+  # gather(key = "Outcome", value = "Total", -Country_Region) %>% 
+  filter(!is.na(Confirmed)) %>% 
+  top_frac(n = 0.1, wt = Confirmed)
+
+# top confirmed cases
+top_cntry %>% 
+  ggplot(aes(x = reorder(Country_Region, Confirmed), y = Confirmed)) +
+    geom_bar(position = "dodge", stat = "identity") +
+    scale_y_continuous(labels = comma) +
+    coord_flip() +
+    theme_bw() +
+    theme(axis.title.y = element_blank()) +
+    ggtitle("Countries with Top 10% of Confirmed Cases")
 ```
