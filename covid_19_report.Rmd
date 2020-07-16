@@ -48,9 +48,9 @@ The purpose of this report is to get a general idea of how covid-19 is effecting
 
 ## The Data
 
-The data used in this analysis is from John Hopkins. The data and details about the data can be found here: https://github.com/CSSEGISandData/COVID-19
+The data used in for the large majority of this analysis is from John Hopkins. The data and details about the data can be found here: https://github.com/CSSEGISandData/COVID-19
 
-Here is a list of all the dates used in this data:
+Here is a list of all the dates used in this data which ranges from `r min(gsub("_|.csv", "", basename(covid_files)))` to `r max(gsub("_|.csv", "", basename(covid_files)))`:
 
 ```{r read-in-data, echo=FALSE}
 # john hopskins data ----
@@ -70,7 +70,7 @@ covid_data <- map(covid_files,
 
 ```
 
-The data is an accumulation of what is reported everyday in each of the observations. Here is a glimpse of the dataset:
+The data is an accumulation of reported cases, deaths, and recoveries from each state/provonice in each country. Here is a `glimpse` of the dataset:
 
 ```{r glimpse-data, echo=FALSE}
 covid_data %>% glimpse()
@@ -80,11 +80,10 @@ covid_data %>% glimpse()
 
 ## Aggregation Overtime
 
-Covid-19 is interesting because it's a common threat around the world. Therefore, lets look at what's happening to the world as a whole first. We can do that by grouping the number of cases by `Date`. It's easy to see from the graph below, the number of cases around the world is exponential and deaths and recoveries has a delay but appears to have that save exponential curve. This makes sense because it takes time (about two weeks) to either recover or die from the virus.
+Covid-19 is interesting because it's a common threat around the world. Therefore, lets look at what's happening to the world as a whole first. We can do that by grouping the number of cases by `Date`. It's easy to see from the graph below, the number of cases around the world is exponential and deaths and recoveries has a delay but appears to have that same exponential curve. This makes sense because it takes time (about two weeks) to either recover or die from the virus.
 
-```{r world-analysis, echo=FALSE}
-# world analysis ----
-
+```{r world-line, echo=FALSE}
+# group by all countries date
 covid_world <- covid_data %>%
   group_by(Date) %>%
   summarize(Confirmed = sum(Confirmed),
@@ -96,27 +95,27 @@ covid_world <- covid_data %>%
 # line graph
 covid_world %>% 
   ggplot(aes(x = Date, y = Total, color = Outcome)) +
-    geom_line() +
-    scale_y_continuous(labels = comma) +
-    scale_colour_discrete(guide = 'none') +
-    scale_x_date(breaks = pretty_breaks(10), expand = c(0, 10)) +
-    geom_dl(aes(label = Outcome), method = list(dl.trans(x = x + 0.2), "last.points", cex = 0.8)) +
-    coord_cartesian(clip = 'off') +
-    theme_bw() +
-    ggtitle("Covid19 Cases in The World")
+  geom_line() +
+  scale_y_continuous(labels = comma) +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_date(breaks = pretty_breaks(10), expand = c(0, 10)) +
+  geom_dl(aes(label = Outcome), method = list(dl.trans(x = x + 0.2), "last.points", cex = 0.8)) +
+  coord_cartesian(clip = 'off') +
+  theme_bw() +
+  ggtitle("Covid19 Cases in The World")
 ```
 
 Lets look at that in a different way. Below we are looking at the same information, except in a stacked "percent" bar-chart. This shows the percent/proportion on the `y-axis` and colors represent the percent. This type of graph helps identify the distribution overtime. You can see the deaths are representing a higher proportion of the graph toward the end of the time frame but stay pretty consistent over time.
 
-```{r stacked-world bar, echo=FALSE}
+```{r stacked-world-bar, echo=FALSE}
 # stacked area graph
 covid_world %>% 
   ggplot(aes(x = Date, y = Total, fill = Outcome)) +
-    geom_area(position="fill", stat="identity", alpha=0.6) +
-    scale_x_date(breaks = pretty_breaks(10)) +
-    theme_classic() +
-    ylab("Proportion") +
-    ggtitle("Stacked Proportion of World Cases and Outcomes")
+  geom_area(position="fill", stat="identity", alpha=0.6) +
+  scale_x_date(breaks = pretty_breaks(10)) +
+  theme_classic() +
+  ylab("Proportion") +
+  ggtitle("Stacked Proportion of World Cases and Outcomes")
 ```
 
 ## Death Rate
@@ -124,7 +123,7 @@ covid_world %>%
 Another way to look at this virus, and what has everyone worried, is the death rates. It's supposed to have a much higher death rate than the flu, which we won't get into too much detail about, but I think we can agree that makes sense because of there is no vaccine and hospitals are flooded with people because of it. We can get death rate by simply dividing the number of deaths by the number of cases. We'll do the same thing for recovery. We will filter out any days where the death was `NA`.
 
 ```{r death-rate-overtime, echo=FALSE, fig.hold='hold', out.width="50%"}
-
+# death rate line
 covid_world %>% 
   spread(key = "Outcome", value = "Total") %>% 
   filter(!is.na(Deaths)) %>% 
@@ -133,11 +132,12 @@ covid_world %>%
   select(Date, Death_Rate, Recovered_Rate) %>% 
   gather(key = "Outcome", value = "Total", -Date) %>% 
   ggplot(aes(x = Date, y = Total, color = Outcome)) +
-    geom_line() +
-    theme_bw() +
-    ylab("Proportion") +
-    ggtitle("Death & Recover Rate Overtime")
+  geom_line() +
+  theme_bw() +
+  ylab("Proportion") +
+  ggtitle("Death & Recover Rate Overtime")
 
+# death rate stacked
 covid_world %>% 
   spread(key = "Outcome", value = "Total") %>% 
   filter(!is.na(Deaths)) %>% 
@@ -146,28 +146,27 @@ covid_world %>%
   select(Date, Death_Rate, Recovered_Rate) %>% 
   gather(key = "Outcome", value = "Total", -Date) %>%
   ggplot(aes(x = Date, y = Total, fill = Outcome)) +
-    geom_area(position="fill", stat="identity", alpha=0.6) +
-    scale_x_date(breaks = pretty_breaks(10)) +
-    theme_classic() +
-    ylab("Proportion") +
-    ggtitle("Stacked Death & Recover Rate Overtime")
-
+  geom_area(position="fill", stat="identity", alpha=0.6) +
+  scale_x_date(breaks = pretty_breaks(10)) +
+  theme_classic() +
+  ylab("Proportion") +
+  ggtitle("Stacked Death & Recover Rate Overtime")
 ```
 
 # Country Analysis
 
-To look at country analysis we're going to `group by` country and date. Then we will look at the countries with the top 10% or cases.
+To look at country analysis we're going to `group by` country and date. Then we will look at the countries with the top 10% of cases. I've put the number of cases and number of deaths from COVID-19 right next to each other.
 
-```{r top 10 countries, echo=FALSE}
-# country analysis ----
-
+```{r top-countries, echo=FALSE, fig.hold='hold', out.width="50%"}
 # group by country and dates
 cntry_tots <- covid_data %>%
   group_by(Country_Region, Date) %>%
-  summarize(Confirmed = sum(Confirmed), Deaths = sum(Deaths), Recovered = sum(Recovered))
+  summarize(Confirmed = sum(Confirmed), Deaths = sum(Deaths), Recovered = sum(Recovered)) %>% 
+  ungroup()
 
 # top 10% of contries
 top_cntry <- cntry_tots %>% 
+  filter(Date == as.Date(max(gsub("_|.csv", "", basename(covid_files))), format = "%m-%d-%Y")) %>% 
   group_by(Country_Region) %>% 
   summarize(Confirmed = sum(Confirmed, na.rm = T),
             Deaths = sum(Deaths, na.rm = T),
@@ -179,10 +178,59 @@ top_cntry <- cntry_tots %>%
 # top confirmed cases
 top_cntry %>% 
   ggplot(aes(x = reorder(Country_Region, Confirmed), y = Confirmed)) +
-    geom_bar(position = "dodge", stat = "identity") +
-    scale_y_continuous(labels = comma) +
-    coord_flip() +
-    theme_bw() +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_y_continuous(labels = comma) +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.title.y = element_blank()) +
+  ggtitle("Countries with Top 10% of Confirmed Cases")
+
+# top confirmed deaths
+top_cntry %>% 
+  ggplot(aes(x = reorder(Country_Region, Confirmed), y = Deaths)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  scale_y_continuous(labels = comma) +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.title.y = element_blank()) +
+  ggtitle("Deaths in Countries with Top 10% of Confirmed Cases")
+```
+
+We'll skip looking at recoveries because there is not much to look at except a large number of recoveries in China, who is potenitally providing false info. However, below is a propotion graph of countries cases and outcomes.
+
+```{r prop-countries, echo=FALSE}
+# propotion outcome
+top_cntry %>% 
+  gather(key = "Outcome", value = "Total", -Country_Region) %>% 
+  filter(!is.na(Total)) %>% 
+  ggplot(aes(x = Country_Region, y = Total, fill = Outcome)) +
+  geom_bar(position="fill", stat="identity", alpha=0.6) +
+  coord_flip() +
+  theme_bw() +
     theme(axis.title.y = element_blank()) +
-    ggtitle("Countries with Top 10% of Confirmed Cases")
+    ggtitle("Covid Cases and outcomes of Top 10% of Countries w/ Confirmed Cases") +
+    ylab("Proportion")
+
+```
+
+Below shows the cases over time. It's overwhelming to look at all of the top 10 percent case, so we will just look at the top 5 countries. We can see that US is skyrocketing the number of cases. And China is either doing a really good job maintaining their cases growth rate or actually providing false info:
+
+```{r country-cases-overtime, echo=FALSE}
+cntry_tots %>%
+  filter(Country_Region %in% (cntry_tots %>% 
+                                group_by(Country_Region) %>% 
+                                summarize(Confirmed = sum(Confirmed, na.rm = T)) %>% 
+                                top_n(n = 5, wt = Confirmed) %>% 
+                                unlist())) %>% 
+  gather(key = "Outcome", value = "Total", -c(Date, Country_Region)) %>% 
+  filter(!is.na(Total) & Outcome == "Confirmed") %>% 
+  ggplot(aes(x = Date, y = Total, color = Country_Region)) +
+  geom_line() +
+  scale_y_continuous(labels = comma) +
+  scale_colour_discrete(guide = 'none') +
+  scale_x_date(breaks = pretty_breaks(10), expand = c(0, 5)) +
+  geom_dl(aes(label = Country_Region), method = list(dl.trans(x = x + 0.2), "last.points", cex = 0.8)) +
+  coord_cartesian(clip = 'off') +
+  theme_bw() +
+  ggtitle("Top 5 Countries COVID-19 Cases Over Time")
 ```
